@@ -1,59 +1,29 @@
 import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
+
+// Importation de notre routeur externe créé précédemment
+import movieRoutes from './routes/movie.routes';
 
 const app = express();
-const PORT = 3001;
+// Le TP indique le port 3000 pour le backend afin de le lier au frontend
+const PORT = 3000;
 
-// Configuration du serveur 
-app.use(cors()); // Autorise le frontend à communiquer avec le serveur
-app.use(express.json()); // Permet au serveur de lire les données JSON envoyées par le client
+// 1. Configuration de la sécurité et des données
+// Autoriser le Frontend à communiquer avec l'API
+app.use(cors());
+app.use(express.json());
 
-// Contrat de données : définit à quoi ressemble une tâche 
-interface Task {
-  id: number;
-  label: string;
-  isDone: boolean;
-}
+// 2. Connexion à la base de données MongoDB Atlas
+const uri = "mongodb+srv://moslehmohammed320_db_user:k3rigB6zQvVWKlVb@mernstarter.dupmppf.mongodb.net/test?appName=MernStarter";
 
-// Base de données temporaire en mémoire (RAM) 
-let tasks: Task[] = [
-  { id: 1, label: "tache 1", isDone: true },
-  { id: 2, label: "tache 2", isDone: false }
-];
+mongoose.connect(uri)
+  .then(() => console.log("Connexion réussie à MongoDB Atlas!"))
+  .catch((error) => console.error("Erreur de connexion à la base de données:", error));
 
-// Route 1 : Récupérer toutes les tâches 
-app.get('/api/tasks', (req, res) => {
-  res.json(tasks);
-});
-
-// Route 2 : Ajouter une tâche 
-app.post('/api/tasks', (req, res) => {
-  const { label } = req.body;
-  const newTask: Task = {
-    id: Date.now(), // ID unique basé sur l'heure actuelle 
-    label: label,
-    isDone: false // Une tâche est toujours incomplète au début 
-  };
-  tasks.push(newTask);
-  res.status(201).json(newTask); // Status 201 signifie "Créé avec succès" 
-});
-
-// Route 3 : Modifier l'état (terminé/en cours) 
-app.put('/api/tasks/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const task = tasks.find(t => t.id === id);
-  if (task) {
-    task.isDone = !task.isDone; // Inverse la valeur de isDone 
-    res.json(task);
-  }
-});
-
-// Route 4 : Supprimer une tâche 
-app.delete('/api/tasks/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  tasks = tasks.filter(t => t.id !== id); // Retire la tâche du tableau 
-  res.json({ message: "Tâche supprimée" });
-});
+// 3. Liaison des routes
+// On indique au serveur d'utiliser nos routes avec le préfixe /api/movies
+app.use('/api/movies', movieRoutes);
 
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);

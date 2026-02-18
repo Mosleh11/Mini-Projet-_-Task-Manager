@@ -1,79 +1,102 @@
 import { useState, useEffect } from 'react';
-import * as api from './services/api';
 
-interface Task {
-  id: number;
-  label: string;
-  isDone: boolean;
+interface Movie {
+  _id: string; 
+  title: string;
+  director: string;
+  year: number;
+  genre: string;
+  poster?: string;
+  description?: string;
 }
 
 export default function App() {
-  // États pour stocker les tâches et le texte du formulaire 
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [newLabel, setNewLabel] = useState("");
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [search, setSearch] = useState("");
+  const [genre, setGenre] = useState("");
+  
+  //  Pour gérer le tri par année 
+  const [sortByYear, setSortByYear] = useState(false);
 
-  // Charge les données au démarrage 
   useEffect(() => {
-    loadTasks();
-  }, []);
+    // Construction de l'URL avec les paramètres 
+    let url = `http://localhost:3000/api/movies?title=${search}`;
+    if (genre) url += `&genre=${genre}`;
+    
+    // Si le tri est activé, on ajoute le paramètre sort=year 
+    if (sortByYear) url += `&sort=year`;
 
-  const loadTasks = async () => {
-    const data = await api.getAllTasks();
-    setTasks(data);
-  };
-
-  // Ajout : met à jour le serveur PUIS l'écran 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newLabel.trim()) return;
-    const task = await api.createTask(newLabel);
-    setTasks([...tasks, task]); // Ajoute la nouvelle tâche à la liste existante
-    setNewLabel(""); // Vide le champ de saisie
-  };
-
-  const handleToggle = async (id: number) => {
-    const updated = await api.toggleTask(id);
-    setTasks(tasks.map(t => t.id === id ? updated : t));
-  };
-
-  const handleDelete = async (id: number) => {
-    await api.deleteTask(id);
-    setTasks(tasks.filter(t => t.id !== id));
-  };
+    fetch(url)
+      .then(res => res.json())
+      .then(data => setMovies(data))
+      .catch(err => console.error(err));
+  }, [search, genre, sortByYear]); // On ajoute sortByYear aux dépendances 
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Task Manager</h1>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '1000px', margin: '0 auto' }}>
+      <h1>Ciné-Explore</h1>
 
-      {/* Formulaire de saisie  */}
-      <form onSubmit={handleAdd} style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: '30px', display: 'flex', gap: '15px', alignItems: 'center' }}>
         <input 
-          value={newLabel} 
-          onChange={(e) => setNewLabel(e.target.value)}
-          placeholder="Nouvelle tâche..."
+          placeholder="Rechercher un film..." 
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ padding: '10px', flex: 2, borderRadius: '5px', border: '1px solid #ccc' }}
         />
-        <button type="submit">Ajouter</button>
-      </form>
+        
+        <select 
+          value={genre} 
+          onChange={(e) => setGenre(e.target.value)}
+          style={{ padding: '10px', flex: 1, borderRadius: '5px', border: '1px solid #ccc' }}
+        >
+          <option value="">Tous les genres</option>
+          <option value="Action">Action</option>
+          <option value="fantasie">Fantasie</option>
+          <option value="Drama">Drama</option>
+          <option value="Sci-Fi">Sci-Fi</option>
+        </select>
 
-      {/* Liste des tâches  */}
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {tasks.map(task => (
-          <li key={task.id} style={{ marginBottom: '10px', display: 'flex', gap: '10px' }}>
-            <span style={{ 
-              textDecoration: task.isDone ? 'line-through' : 'none', // Barre le texte si fini 
-              flex: 1 
-            }}>
-              {task.label}
-            </span>
-            <button onClick={() => handleToggle(task.id)}>
-              {task.isDone ? "Annuler" : "Valider"} {/* Bouton Check/Uncheck  */}
-            </button>
-            <button onClick={() => handleDelete(task.id)} style={{ color: 'red' }}>
-              Supprimer
-            </button>
-          </li>
+        {/* Bouton de Tri   */}
+        <button 
+          onClick={() => setSortByYear(!sortByYear)}
+          style={{ 
+            padding: '10px 15px', 
+            borderRadius: '5px', 
+            border: 'none', 
+            cursor: 'pointer',
+            backgroundColor: sortByYear ? '#28a745' : '#6c757d',
+            color: 'white'
+          }}
+        >
+          {sortByYear ? "Tri : Plus récents" : "Trier par année"}
+        </button>
+      </div>
+
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+        gap: '20px' 
+      }}>
+        {movies.map(movie => (
+          <div key={movie._id} style={{ 
+            border: '1px solid #eee', 
+            borderRadius: '10px', 
+            overflow: 'hidden', 
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)' 
+          }}>
+            <img 
+              src={movie.poster || 'https://via.placeholder.com/300x450?text=No+Poster'} 
+              alt={movie.title}
+              style={{ width: '100%', height: '350px', objectFit: 'cover' }}
+            />
+            <div style={{ padding: '15px' }}>
+              <h3 style={{ margin: '0 0 10px 0' }}>{movie.title}</h3>
+              <p style={{ color: '#666', fontSize: '0.9em' }}>{movie.genre} • {movie.year}</p>
+              <p style={{ fontSize: '0.85em', color: '#444' }}>{movie.description}</p>
+            </div>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
